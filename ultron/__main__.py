@@ -1,0 +1,7 @@
+"""Entry point for python -m ultron."""
+
+import sys
+from ultron.cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())

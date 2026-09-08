@@ -1,0 +1,133 @@
+{
+  "type": "object",
+  "description": "Результат роли verify: прогон гейта проекта и разбор падений. Код не менять. status=done означает, что гейт прогнан и разобран, даже если тесты упали; failed — гейт запустить не удалось.",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "done",
+        "partial",
+        "failed",
+        "blocked"
+      ],
+      "description": "done — всё из брифа сделано; partial — часть, остальное описано; failed — не удалось; blocked — нужно решение человека, вопрос в open_questions"
+    },
+    "summary": {
+      "type": "string",
+      "description": "До 5 предложений для читателя без контекста: что сделано или найдено и что важно для задачи"
+    },
+    "evidence": {
+      "type": "array",
+      "description": "До 12 доказательств. Якорь путь:строка или команда, выдержка не длиннее 3 строк. Сырые логи не вставлять",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "короткий id: e1, e2, …"
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка или команда"
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "до 3 строк дословно"
+          }
+        },
+        "required": [
+          "id",
+          "where",
+          "excerpt"
+        ]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "До 5 развилок, которые исполнитель не вправе решать сам. Пусто, если их нет"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Что делать дальше, одной фразой"
+    },
+    "gate": {
+      "type": "object",
+      "description": "Что и с каким итогом запущено",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "passed": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "skipped": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "command",
+        "exit_code",
+        "passed",
+        "failed",
+        "skipped"
+      ]
+    },
+    "failures": {
+      "type": "array",
+      "description": "Каждое падение, до 20. Сырой лог не вставлять",
+      "items": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "type": "string",
+            "description": "имя теста или проверки"
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка теста"
+          },
+          "reason": {
+            "type": "string",
+            "description": "одна-две фразы: что именно упало, ожидание против факта"
+          },
+          "suspected_cause": {
+            "type": "string",
+            "description": "одна фраза: вероятная причина в коде, с путь:строка если известно"
+          }
+        },
+        "required": [
+          "test",
+          "where",
+          "reason",
+          "suspected_cause"
+        ]
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Предупреждения анализатора или линтера, до 10, одной фразой каждое"
+    }
+  },
+  "required": [
+    "status",
+    "summary",
+    "evidence",
+    "open_questions",
+    "next_action",
+    "gate",
+    "failures",
+    "warnings"
+  ]
+}

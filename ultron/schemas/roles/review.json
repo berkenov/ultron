@@ -1,0 +1,143 @@
+{
+  "type": "object",
+  "description": "Результат роли review: независимая проверка чужого решения по коду. Файлы не менять. Общие рассуждения без привязки к файлам не засчитываются.",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "done",
+        "partial",
+        "failed",
+        "blocked"
+      ],
+      "description": "done — всё из брифа сделано; partial — часть, остальное описано; failed — не удалось; blocked — нужно решение человека, вопрос в open_questions"
+    },
+    "summary": {
+      "type": "string",
+      "description": "До 5 предложений для читателя без контекста: что сделано или найдено и что важно для задачи"
+    },
+    "evidence": {
+      "type": "array",
+      "description": "До 12 доказательств. Якорь путь:строка или команда, выдержка не длиннее 3 строк. Сырые логи не вставлять",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "короткий id: e1, e2, …"
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка или команда"
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "до 3 строк дословно"
+          }
+        },
+        "required": [
+          "id",
+          "where",
+          "excerpt"
+        ]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "До 5 развилок, которые исполнитель не вправе решать сам. Пусто, если их нет"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Что делать дальше, одной фразой"
+    },
+    "verdicts": {
+      "type": "array",
+      "description": "По каждому утверждению из брифа, до 30",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "false",
+              "partially",
+              "unknown"
+            ]
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка; для отсутствия — где искал"
+          },
+          "note": {
+            "type": "string",
+            "description": "одна-две фразы, почему такой вердикт"
+          }
+        },
+        "required": [
+          "claim",
+          "verdict",
+          "where",
+          "note"
+        ]
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "До 15",
+      "items": {
+        "type": "object",
+        "properties": {
+          "risk": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка или «не найдено»"
+          },
+          "mitigation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "risk",
+          "where",
+          "mitigation"
+        ]
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "properties": {
+        "choice": {
+          "type": "string",
+          "description": "что рекомендуешь, одной фразой"
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "до 5 предложений с привязкой к коду"
+        }
+      },
+      "required": [
+        "choice",
+        "reasoning"
+      ]
+    }
+  },
+  "required": [
+    "status",
+    "summary",
+    "evidence",
+    "open_questions",
+    "next_action",
+    "verdicts",
+    "risks",
+    "recommendation"
+  ]
+}

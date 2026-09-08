@@ -1,0 +1,132 @@
+{
+  "type": "object",
+  "description": "Результат роли code: что изменено и чем проверено.",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "done",
+        "partial",
+        "failed",
+        "blocked"
+      ],
+      "description": "done — всё из брифа сделано; partial — часть, остальное описано; failed — не удалось; blocked — нужно решение человека, вопрос в open_questions"
+    },
+    "summary": {
+      "type": "string",
+      "description": "До 5 предложений для читателя без контекста: что сделано или найдено и что важно для задачи"
+    },
+    "evidence": {
+      "type": "array",
+      "description": "До 12 доказательств. Якорь путь:строка или команда, выдержка не длиннее 3 строк. Сырые логи не вставлять",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "короткий id: e1, e2, …"
+          },
+          "where": {
+            "type": "string",
+            "description": "путь:строка или команда"
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "до 3 строк дословно"
+          }
+        },
+        "required": [
+          "id",
+          "where",
+          "excerpt"
+        ]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "До 5 развилок, которые исполнитель не вправе решать сам. Пусто, если их нет"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Что делать дальше, одной фразой"
+    },
+    "changed_files": {
+      "type": "array",
+      "description": "Каждый созданный, изменённый или удалённый файл. Пусто, если ничего не менял",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "modified",
+              "deleted"
+            ]
+          },
+          "what": {
+            "type": "string",
+            "description": "одна фраза: что именно изменено"
+          }
+        },
+        "required": [
+          "path",
+          "action",
+          "what"
+        ]
+      }
+    },
+    "commands": {
+      "type": "array",
+      "description": "Команды, которые запускал (тесты, анализ, сборка), до 10. Только итог, без сырого вывода",
+      "items": {
+        "type": "object",
+        "properties": {
+          "cmd": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string",
+            "description": "одна фраза: что показала команда"
+          }
+        },
+        "required": [
+          "cmd",
+          "exit_code",
+          "summary"
+        ]
+      }
+    },
+    "not_done": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Что из брифа не сделано и почему. Пусто, если сделано всё"
+    },
+    "patch": {
+      "type": "string",
+      "description": "Только в режиме plan: unified diff предлагаемых изменений. Иначе пустая строка"
+    }
+  },
+  "required": [
+    "status",
+    "summary",
+    "evidence",
+    "open_questions",
+    "next_action",
+    "changed_files",
+    "commands",
+    "not_done",
+    "patch"
+  ]
+}

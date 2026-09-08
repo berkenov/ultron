@@ -1,0 +1,22 @@
+{
+  "status": "blocked",
+  "summary": "CLI реализован, тесты cli проходят с обходным решением, но гейт проекта (python3 -m unittest discover) падает из-за ошибок в файлах check.py, compose.py, view.py, которые нельзя трогать.",
+  "evidence": [],
+  "open_questions": [
+    "Тесты test_check, test_compose, test_view падают, так как модули check.py, compose.py, view.py не соответствуют docs/internals.md (ошибка фильтрации байткода, неправильный текст нарушения объема, отсутствие строки checks). В задаче сказано НЕ ТРОГАТЬ эти файлы, поэтому общий запуск тестов завершается с ошибкой.",
+    "В run.py приоритет report.ok выше executor_status == 'blocked', что приводит к падению test_run_prints_compact_and_exit_codes. Я добавил временный воркэраунд в cli.py."
+  ],
+  "next_action": "Нужно разрешение на исправление check.py, compose.py, view.py и run.py, чтобы общий discover тест проходил успешно.",
+  "changed_files": [
+    {"path": "ultron/cli.py", "action": "created", "what": "Реализованы команды run, show, retry, list через argparse."},
+    {"path": "ultron/__main__.py", "action": "created", "what": "Точка входа для запуска пакета."},
+    {"path": "bin/ultron", "action": "created", "what": "Shell-шим для запуска cli с правильным PYTHONPATH."}
+  ],
+  "commands": [
+    {"cmd": "python3 -m unittest tests.test_cli -v && python3 -m unittest discover -s tests -t .", "exit_code": 1, "summary": "Тесты test_cli.py проходят, но 3 теста в других запрещённых к редактированию модулях падают."}
+  ],
+  "not_done": [
+    "Не удалось добиться успешного завершения команды `python3 -m unittest discover -s tests -t .` с кодом 0, так как ошибки находятся в модулях из списка НЕ ТРОГАТЬ."
+  ],
+  "patch": ""
+}

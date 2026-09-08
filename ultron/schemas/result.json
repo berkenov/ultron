@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ultron TaskResult",
+  "description": "What the runtime hands back. status is the runtime's verdict; executor_status is the model's claim; changed_files come from git.",
+  "type": "object",
+  "required": [
+    "id",
+    "role",
+    "status",
+    "executor_status",
+    "attempts",
+    "tier",
+    "summary",
+    "changed_files",
+    "claimed_files",
+    "checks",
+    "role_fields",
+    "evidence",
+    "open_questions",
+    "next_action",
+    "failure",
+    "usage",
+    "refs"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "explore",
+        "code",
+        "verify",
+        "review"
+      ]
+    },
+    "status": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "blocked",
+        "failed"
+      ]
+    },
+    "executor_status": {
+      "enum": [
+        "done",
+        "partial",
+        "failed",
+        "blocked",
+        null
+      ]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tier": {
+      "type": "string",
+      "description": "model of the last attempt"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "from git status, relative to dir"
+    },
+    "claimed_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "from the executor's changed_files"
+    },
+    "checks": {
+      "type": "object",
+      "required": [
+        "contract",
+        "scope",
+        "gate",
+        "violations",
+        "restored"
+      ],
+      "properties": {
+        "contract": {
+          "enum": [
+            "ok",
+            "violated",
+            "missing"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "ok",
+            "restored",
+            "violated",
+            "skipped"
+          ]
+        },
+        "gate": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "exit": {
+              "type": "integer"
+            },
+            "expected": {
+              "type": "integer"
+            },
+            "attempt": {
+              "type": "integer"
+            },
+            "log": {
+              "type": "string"
+            }
+          }
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "from the last attempt; empty when accepted"
+        },
+        "restored": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "paths the runtime restored from baseline across all attempts"
+        }
+      }
+    },
+    "role_fields": {
+      "type": "object",
+      "description": "role sections of the last structured output: map, facts, changed_files, commands, not_done, patch, gate, failures, warnings, verdicts, risks, recommendation"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "where"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "where": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "ids and anchors only; excerpts stay in state"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "executor_in": {
+          "type": "integer"
+        },
+        "cache_read": {
+          "type": "integer"
+        },
+        "executor_out": {
+          "type": "integer"
+        },
+        "thinking": {
+          "type": "integer"
+        },
+        "seconds": {
+          "type": "number"
+        }
+      },
+      "description": "summed over all attempts"
+    },
+    "refs": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "conversation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "patch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "snapshots": {
+          "type": "object",
+          "properties": {
+            "baseline": {
+              "type": "string"
+            },
+            "attempts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "worktree": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integration": {
+          "enum": [
+            "applied",
+            "conflict",
+            "empty",
+            null
+          ]
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "required": [
+        "domain",
+        "kind"
+      ],
+      "properties": {
+        "domain": {
+          "enum": [
+            "none",
+            "infra",
+            "execution",
+            "decision",
+            "semantic"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "description": "none: ''; infra: no_output|timeout|budget_tokens|budget_minutes; execution: gate|scope|contract; decision: blocked; semantic: what Claude named"
+        }
+      }
+    }
+  }
+}

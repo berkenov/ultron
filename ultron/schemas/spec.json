@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ultron TaskSpec",
+  "description": "What Claude asks for. The prose brief carries the task; this envelope carries what the runtime enforces.",
+  "type": "object",
+  "required": [
+    "id",
+    "role",
+    "dir",
+    "brief"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "description": "task id, e.g. T-03; also the state directory name"
+    },
+    "role": {
+      "enum": [
+        "explore",
+        "code",
+        "verify",
+        "review"
+      ]
+    },
+    "goal": {
+      "type": "string",
+      "description": "one line for the journal"
+    },
+    "dir": {
+      "type": "string",
+      "description": "absolute path of the executor's working directory"
+    },
+    "brief": {
+      "type": "string",
+      "description": "path to the prose brief; relative paths resolve against the spec file"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "write": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "paths (files or dir prefixes) the executor may change; empty for read-only roles"
+        },
+        "forbid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "paths that must not change even if under write"
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "role fields of that task's result to quote into the brief; default: summary"
+          }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "cmd"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "cmd": {
+            "type": "string",
+            "description": "shell command run in dir by the runtime"
+          },
+          "expect_exit": {
+            "type": "integer",
+            "default": 0
+          }
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "attempts_per_tier": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "models in escalation order; default from policy"
+        },
+        "executor_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "minutes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "effort": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            null
+          ]
+        },
+        "mode": {
+          "enum": [
+            "plan",
+            null
+          ]
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "inplace",
+            "worktree"
+          ],
+          "default": "inplace"
+        },
+        "seed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "commands run inside a fresh worktree before the executor"
+        }
+      }
+    }
+  }
+}
