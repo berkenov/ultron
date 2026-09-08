@@ -28,8 +28,9 @@ ultron list --dir /abs/repo
 ultron run spec.json --dry-run                # показать команду agy, не запускать
 ```
 
-Пример `spec.json` — в `~/.claude/skills/ultron/SKILL.md`, поля — в
-`ultron/schemas/spec.json`. Состояние и журнал: `~/.ultron/state/<slug>/`
+Полное руководство — [docs/usage.md](docs/usage.md): установка, spec и бриф, чтение
+отчёта, команды, режим worktree, роли, цепочки, состояние, неполадки. Поля spec —
+в `ultron/schemas/spec.json`. Состояние и журнал: `~/.ultron/state/<slug>/`
 (`ULTRON_STATE` меняет корень). Нужен `agy` в PATH и Python 3.10+.
 
 ## Что здесь
