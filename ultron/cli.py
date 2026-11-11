@@ -75,7 +75,16 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
     ask_parser.add_argument("--file", action="append", default=[], type=pathlib.Path)
     ask_parser.add_argument("--dir", type=pathlib.Path, default=pathlib.Path.cwd())
     ask_parser.add_argument("--model")
+    ask_parser.add_argument("--force", action="store_true")
     ask_parser.add_argument("--state", type=pathlib.Path)
+
+    # note command: record who a piece of work went to and why
+    note_parser = subparsers.add_parser("note")
+    note_parser.add_argument("what")
+    note_parser.add_argument("--to", required=True)
+    note_parser.add_argument("--why", default="")
+    note_parser.add_argument("--dir", type=pathlib.Path, default=pathlib.Path.cwd())
+    note_parser.add_argument("--state", type=pathlib.Path)
 
     # budget command: learned limits and the current mode per model family
     budget_parser = subparsers.add_parser("budget")
@@ -125,9 +134,30 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
         if not directory.is_dir():
             print(f"Каталог {directory} не найден.", file=sys.stderr)
             return 1
+        if args.file and not args.force:
+            total = 0
+            for f in args.file:
+                try:
+                    total += len((f if f.is_absolute() else directory / f).read_text(encoding="utf-8", errors="replace").splitlines())
+                except OSError:
+                    total = policy.ASK_MIN_LINES
+                    break
+            if total < policy.ASK_MIN_LINES:
+                print(f"Не вызвано: в названных файлах {total} строк при пороге {policy.ASK_MIN_LINES} — прочитать самому дешевле. --force, чтобы всё равно спросить.")
+                return 3
         result = ask(args.question, dir=directory, executor=exec_inst, root=root, files=args.file, model=args.model or policy.ASK_MODEL)
         print(render(result))
         return 0 if result.ok else 2
+
+    elif args.command == "note":
+        from ultron import policy
+        from ultron.state import journal_append
+
+        if args.to not in policy.NOTE_TARGETS:
+            print(f"--to: одно из {', '.join(policy.NOTE_TARGETS)}", file=sys.stderr)
+            return 1
+        journal_append(root, args.dir.absolute(), {"_meta": {"role": "decision", "to": args.to, "what": args.what, "why": args.why}})
+        return 0
 
     elif args.command == "budget":
         from ultron import limits, policy

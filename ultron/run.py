@@ -439,6 +439,7 @@ def _run_loop(
         j_record["_meta"]["task"] = spec.id
         j_record["_meta"]["role"] = spec.role
         j_record["_meta"]["verdict"] = verdict
+        j_record["_meta"]["claude_chars"] = len(brief_text or "") if attempt.number == 1 else 0
         state.journal_append(j_record)
         
         if verdict in ("accepted", "blocked", "failed", "rejected"):

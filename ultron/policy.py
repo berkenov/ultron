@@ -111,9 +111,15 @@ ASK_TIMEOUT = "5m"
 ASK_MAX_CHARS = 6000  # what Claude sees; the full answer is saved next to the journal
 ASK_NOTE = (
     "Ты консультант, только чтение. " + READONLY_BAN + " "
-    "Ответ — по существу, без вступлений, до 40 строк. "
-    "Утверждения о коде — с якорем путь:строка. Чего не знаешь или не нашёл — так и напиши."
+    "Без вступлений, до 40 строк. Если вопрос про код проекта, ответ — список мест, а не рассказ: "
+    "на каждое место строка `путь:строка` — дословная выдержка 1–3 строки — одна фраза, зачем оно. "
+    "Пути относительно корня проекта, имена функций и классов — в обратных кавычках и дословно. "
+    "После списка — вывод в 1–3 предложения. Последней строкой «Не нашёл:» — что искал и не нашёл, или «ничего». "
+    "Якоря и имена сверяет программа: несуществующая строка или имя будет помечено. "
+    "Если вопрос не про код — краткий ответ со ссылками на источники."
 )
+ASK_MIN_LINES = 300  # named files shorter than this in total are cheaper for Claude to read itself
+NOTE_TARGETS = ("self", "subagent", "flash", "argon")  # who a piece of work went to (`ultron note`)
 
 # Pacing: minimum pause between executor calls, so runs do not look like a flood
 # to the subscription's abuse filters. 0 disables.

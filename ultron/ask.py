@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from typing import Sequence
 
 from ultron import limits, policy
+from ultron.askcheck import AnswerCheck, check_answer
 from ultron.executor import Executor
 from ultron.pace import wait_turn
 from ultron.state import journal_append, project_slug
@@ -30,6 +31,7 @@ class AskResult:
     changed: tuple[str, ...]
     saved: pathlib.Path | None
     noise: tuple[str, ...]
+    check: AnswerCheck | None = None
 
 
 def compose_question(question: str, files: Sequence[pathlib.Path]) -> str:
@@ -91,13 +93,18 @@ def ask(
     saved = _save_answer(root, dir, text) if text else None
 
     quota = limits.record(root, model, env)
+    check = check_answer(text, dir) if text else None
     record = dict(env.raw)
-    record["_meta"] = {"task": "ask", "role": "ask", "model": model, "verdict": "answered" if ok else "failed", "changed": list(changed)}
+    record["_meta"] = {
+        "task": "ask", "role": "ask", "model": model, "verdict": "answered" if ok else "failed", "changed": list(changed),
+        "unverified": len(check.problems) if check else 0,
+        "claude_chars": len(question) + min(len(text), policy.ASK_MAX_CHARS),
+    }
     journal_append(root, dir, record)
 
     return AskResult(
         ok=ok, status="QUOTA" if quota else (env.status or "NO_OUTPUT"), text=text, model=model,
-        seconds=env.duration_seconds, usage=env.usage, changed=changed, saved=saved, noise=env.noise,
+        seconds=env.duration_seconds, usage=env.usage, changed=changed, saved=saved, noise=env.noise, check=check,
     )
 
 
@@ -114,6 +121,11 @@ def render(result: AskResult) -> str:
     else:
         lines.append(f"Ответа нет: {result.status}.")
         lines += [f"  {n}" for n in result.noise[-5:]]
+    if result.check and result.check.problems:
+        lines.append(f"НЕ ПОДТВЕРЖДЕНО ({len(result.check.problems)}) — эти места ответа неверны, перепроверь сам:")
+        lines += [f"  - {p}" for p in result.check.problems[:15]]
+    elif result.check and (result.check.anchors or result.check.symbols):
+        lines.append(f"сверено с кодом: якорей {result.check.anchors}, имён {result.check.symbols} — существуют; выводы из них не проверялись")
     if result.changed:
         lines.append("ВНИМАНИЕ: исполнитель изменил файлы при запрете: " + "; ".join(result.changed[:10]))
     tokens = result.usage.get("total_tokens", 0)
