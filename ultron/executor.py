@@ -107,7 +107,7 @@ class Executor(Protocol):
         *,
         dir: pathlib.Path,
         model: str,
-        schema: pathlib.Path,
+        schema: pathlib.Path | None,
         conversation: str | None = None,
         mode: str | None = None,
         effort: str | None = None,
@@ -127,7 +127,7 @@ class AgyExecutor:
         *,
         dir: pathlib.Path,
         model: str,
-        schema: pathlib.Path,
+        schema: pathlib.Path | None,
         conversation: str | None = None,
         mode: str | None = None,
         effort: str | None = None,
@@ -140,9 +140,10 @@ class AgyExecutor:
             "--add-dir", str(dir),
             "--model", model,
             "--output-format", "json",
-            "--json-schema", str(schema),
-            "--print-timeout", timeout
         ]
+        if schema is not None:
+            cmd.extend(["--json-schema", str(schema)])
+        cmd.extend(["--print-timeout", timeout])
         if conversation is not None:
             cmd.extend(["--conversation", conversation])
         if mode is not None:
@@ -157,7 +158,7 @@ class AgyExecutor:
         *,
         dir: pathlib.Path,
         model: str,
-        schema: pathlib.Path,
+        schema: pathlib.Path | None,
         conversation: str | None = None,
         mode: str | None = None,
         effort: str | None = None,

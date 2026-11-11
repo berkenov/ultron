@@ -104,3 +104,22 @@ DEFAULT_STATE_ROOT = "~/.ultron/state"
 # Executor defaults.
 AGY_TIMEOUT = "20m"
 AGY_TIMEOUT_MAX_MINUTES = 60
+
+# Quick read-only questions (`ultron ask`): no spec, no snapshots, no gate.
+ASK_MODEL = "gemini-3.8-flash-high"
+ASK_TIMEOUT = "5m"
+ASK_MAX_CHARS = 6000  # what Claude sees; the full answer is saved next to the journal
+ASK_NOTE = (
+    "Ты консультант, только чтение. " + READONLY_BAN + " "
+    "Ответ — по существу, без вступлений, до 40 строк. "
+    "Утверждения о коде — с якорем путь:строка. Чего не знаешь или не нашёл — так и напиши."
+)
+
+# Pacing: minimum pause between executor calls, so runs do not look like a flood
+# to the subscription's abuse filters. 0 disables.
+PACE_SECONDS = 5
+PACE_ENV = "ULTRON_PACE_SECONDS"
+
+# Windows `ultron usage` reports: the subscription refreshes every five hours
+# under a weekly cap. Google publishes no numbers, so this only counts our side.
+USAGE_WINDOWS = (("5 ч", 5 * 3600), ("7 дн", 7 * 86400))

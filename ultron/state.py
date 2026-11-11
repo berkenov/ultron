@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+from datetime import datetime, timezone
 
 from ultron import policy
 
@@ -122,11 +123,7 @@ class TaskState:
 
     def journal_append(self, record: dict) -> None:
         """Append a record to the project's journal.jsonl."""
-        journal_path = self.root / project_slug(self.project_dir) / "journal.jsonl"
-        journal_path.parent.mkdir(parents=True, exist_ok=True)
-        with journal_path.open("a", encoding="utf-8") as f:
-            json.dump(record, f, ensure_ascii=False)
-            f.write("\n")
+        journal_append(self.root, self.project_dir, record)
 
     def reset(self) -> None:
         """Remove attempts, gate log, patch, result, and attempt patches, keeping the task dir."""
@@ -149,3 +146,16 @@ def list_tasks(root: pathlib.Path, project_dir: pathlib.Path) -> list[str]:
         if p.is_dir():
             tasks.append(p.name)
     return sorted(tasks)
+
+
+def journal_append(root: pathlib.Path, project_dir: pathlib.Path, record: dict) -> None:
+    """Append a record to the project's journal.jsonl, stamping `_meta.at` (UTC)."""
+    stamped = dict(record)
+    meta = dict(stamped.get("_meta") or {})
+    meta.setdefault("at", datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    stamped["_meta"] = meta
+    journal_path = root / project_slug(project_dir) / "journal.jsonl"
+    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    with journal_path.open("a", encoding="utf-8") as f:
+        json.dump(stamped, f, ensure_ascii=False)
+        f.write("\n")

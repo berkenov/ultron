@@ -9,6 +9,7 @@ from ultron import policy
 from ultron.check import CheckReport, check_all, load_role_schema, check_scope, check_diff_size, DIFF_LIMIT_PREFIX
 from ultron.compose import AttemptSummary, compose_prompt, escalation_prompt, retry_message, report_only_message
 from ultron.executor import Envelope, Executor
+from ultron.pace import wait_turn
 from ultron.spec import Spec, SpecError
 from ultron.state import TaskState
 from ultron.snapshot import take_snapshot, diff_paths, restore_paths, restore_all, patch_between, drop_snapshots
@@ -247,6 +248,7 @@ def _run_loop(
     while True:
         model = spec.budget.tiers[tier_idx]
         
+        wait_turn(state.root)
         env = executor.run(
             prompt,
             dir=work_dir,

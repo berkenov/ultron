@@ -123,9 +123,11 @@ class FakeExecutor:
     def __init__(self, steps):
         self.steps = list(steps)
         self.calls: list[dict] = []
+        self.raw_schema: list = []
 
     def run(self, prompt, *, dir, model, schema, conversation=None, mode=None, effort=None, timeout="20m"):
-        self.calls.append({"prompt": prompt, "dir": pathlib.Path(dir), "model": model, "schema": pathlib.Path(schema), "conversation": conversation, "mode": mode, "effort": effort, "timeout": timeout})
+        self.raw_schema.append(schema)
+        self.calls.append({"prompt": prompt, "dir": pathlib.Path(dir), "model": model, "schema": pathlib.Path(schema) if schema is not None else None, "conversation": conversation, "mode": mode, "effort": effort, "timeout": timeout})
         if not self.steps:
             raise AssertionError("FakeExecutor: no steps left")
         step = self.steps.pop(0)

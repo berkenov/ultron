@@ -69,6 +69,18 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
     clean_parser.add_argument("--dir", type=pathlib.Path, default=pathlib.Path.cwd())
     clean_parser.add_argument("--state", type=pathlib.Path)
 
+    # ask command: quick read-only question, no spec
+    ask_parser = subparsers.add_parser("ask")
+    ask_parser.add_argument("question")
+    ask_parser.add_argument("--file", action="append", default=[], type=pathlib.Path)
+    ask_parser.add_argument("--dir", type=pathlib.Path, default=pathlib.Path.cwd())
+    ask_parser.add_argument("--model")
+    ask_parser.add_argument("--state", type=pathlib.Path)
+
+    # usage command: calls and tokens over the subscription windows
+    usage_parser = subparsers.add_parser("usage")
+    usage_parser.add_argument("--state", type=pathlib.Path)
+
     args = parser.parse_args(argv)
 
     root = args.state.absolute() if args.state else state_root()
@@ -95,6 +107,24 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
         
         print(compact(res))
         return 0 if res.get("status") == "accepted" else 2
+
+    elif args.command == "ask":
+        from ultron import policy
+        from ultron.ask import ask, render
+
+        directory = args.dir.absolute()
+        if not directory.is_dir():
+            print(f"Каталог {directory} не найден.", file=sys.stderr)
+            return 1
+        result = ask(args.question, dir=directory, executor=exec_inst, root=root, files=args.file, model=args.model or policy.ASK_MODEL)
+        print(render(result))
+        return 0 if result.ok else 2
+
+    elif args.command == "usage":
+        from ultron.usage import render as render_usage, summarize
+
+        print(render_usage(summarize(root)))
+        return 0
 
     elif args.command == "show":
         state = TaskState(root, args.dir.absolute(), args.task)
