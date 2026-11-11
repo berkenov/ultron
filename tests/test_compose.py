@@ -86,6 +86,7 @@ class ComposeTests(unittest.TestCase):
             contract=("нет обязательных полей: not_done",),
             scope=("вне разрешённого объёма: tests/test_service.py",),
             gate=(GateRun(cmd="python3 tools/check.py", exit_code=1, expected=0, tail=("PASS test_greet_uses_name", "CHECK FAIL: greet has no docstring"), log="..."),),
+            anchors=(),
             warnings=(),
         )
         msg = retry_message(report, spec)
@@ -105,7 +106,7 @@ class ComposeTests(unittest.TestCase):
 
     def test_retry_message_omits_absent_causes(self):
         spec = self.spec(id="T-9")
-        report = CheckReport(contract=(), scope=(), gate=(GateRun(cmd="true", exit_code=2, expected=0, tail=("boom",), log="boom"),), warnings=())
+        report = CheckReport(contract=(), scope=(), gate=(GateRun(cmd="true", exit_code=2, expected=0, tail=("boom",), log="boom"),), anchors=(), warnings=())
         msg = retry_message(report, spec)
         self.assertNotIn("объёма", msg)
         self.assertNotIn("Ответ не по схеме", msg)
@@ -113,7 +114,7 @@ class ComposeTests(unittest.TestCase):
 
     def test_retry_message_keeps_scope_violation_text_verbatim(self):
         spec = self.spec(id="T-11", role="explore")
-        report = CheckReport(contract=(), scope=("роль explore без записи, но изменено: app/service.py",), gate=(), warnings=())
+        report = CheckReport(contract=(), scope=("роль explore без записи, но изменено: app/service.py",), gate=(), anchors=(), warnings=())
         msg = retry_message(report, spec)
         self.assertIn("роль explore без записи, но изменено: app/service.py", msg)
         self.assertIn("откати", msg)
@@ -121,7 +122,7 @@ class ComposeTests(unittest.TestCase):
 
     def test_retry_message_restored_section(self):
         spec = self.spec(id="T-12", scope={"write": ["app/service.py"], "forbid": ["tools/"]})
-        report = CheckReport(contract=(), scope=(), gate=(GateRun(cmd="x", exit_code=1, expected=0, tail=("CHECK FAIL",), log=""),), warnings=())
+        report = CheckReport(contract=(), scope=(), gate=(GateRun(cmd="x", exit_code=1, expected=0, tail=("CHECK FAIL",), log=""),), anchors=(), warnings=())
         msg = retry_message(report, spec, restored=["tools/check.py"])
         self.assertIn("восстановлены оркестратором", msg)
         self.assertIn("tools/check.py", msg)
@@ -159,3 +160,32 @@ class ComposeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_retry_message_anchors(self):
+        spec = self.spec(id="T-20")
+        report = CheckReport(
+            contract=(),
+            scope=(),
+            gate=(),
+            anchors=("якорь: файла нет: missing.py:10", "якорь: строка 500 за пределами файла (10 строк): app/service.py:500"),
+            warnings=()
+        )
+        msg = retry_message(report, spec)
+        self.assertIn("Якоря не подтвердились:", msg)
+        self.assertIn("якорь: файла нет: missing.py:10", msg)
+        self.assertIn("якорь: строка 500 за пределами файла (10 строк): app/service.py:500", msg)
+        self.assertIn("Для каждого: исправь путь и номер строки по файлу или сними утверждение. Выдумывать якорь нельзя; если места в коде нет — пиши «не найдено».", msg)
+
+    def test_retry_message_anchors_readonly(self):
+        spec = self.spec(id="T-21", role="explore")
+        report = CheckReport(
+            contract=(),
+            scope=(),
+            gate=(),
+            anchors=("якорь: файла нет: x.py",),
+            warnings=()
+        )
+        msg = retry_message(report, spec)
+        self.assertIn("Якоря не подтвердились:", msg)
+        self.assertIn("Файлы не менять, поправь ответ.", msg)
+

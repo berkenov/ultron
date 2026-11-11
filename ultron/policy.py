@@ -35,7 +35,8 @@ ANSWER_EXPLORE = (
     "ОТВЕТ — Ответ строго по схеме. map — только файлы, относящиеся к задаче, до 40. "
     "facts — по каждому утверждению из ЗАДАЧИ: вердикт и якорь путь:строка; "
     "если не найдено — написать, где искал. summary до 5 предложений. "
-    "evidence — до 12 якорей с выдержкой не длиннее 3 строк. Сырые логи не вставлять."
+    "evidence — до 12 якорей с выдержкой не длиннее 3 строк. Сырые логи не вставлять. "
+    "Якоря путь:строка проверяет runtime: файл, номер строки и выдержка должны совпадать с кодом дословно; неподтверждённый якорь возвращает задачу."
 )
 ANSWER_CODE = (
     "ОТВЕТ — Ответ строго по схеме. changed_files — каждый тронутый файл за все попытки. "
@@ -45,19 +46,22 @@ ANSWER_CODE = (
 ANSWER_VERIFY = (
     "ОТВЕТ — Ответ строго по схеме. В gate — команда, код выхода и счётчики passed/failed/skipped. "
     "В failures — каждое падение с якорем путь:строка и вероятной причиной в коде. "
-    "Сырой лог не вставлять. summary до 5 предложений."
+    "Сырой лог не вставлять. summary до 5 предложений. "
+    "Якоря путь:строка проверяет runtime: файл, номер строки и выдержка должны совпадать с кодом дословно; неподтверждённый якорь возвращает задачу."
 )
 ANSWER_REVIEW = (
     "ОТВЕТ — Ответ строго по схеме. verdicts — по каждому утверждению из ЗАДАЧИ с якорем. "
     "risks — только с привязкой к файлу или «не найдено». Общие соображения без якоря "
-    "не засчитываются. summary до 5 предложений."
+    "не засчитываются. summary до 5 предложений. "
+    "Якоря путь:строка проверяет runtime: файл, номер строки и выдержка должны совпадать с кодом дословно; неподтверждённый якорь возвращает задачу. "
+    "Каждый verdict со значением false или partially и каждый risk обязаны иметь evidence с выдержкой у того же якоря."
 )
 
 ROLES: dict[str, Role] = {
-    "explore": Role("explore", writes=False, tiers=("gemini-3.8-flash-high", "gemini-3.1-pro-high"), answer_template=ANSWER_EXPLORE),
-    "code": Role("code", writes=True, tiers=("gemini-3.1-pro-high", "claude-sonnet-4-6"), answer_template=ANSWER_CODE),
-    "verify": Role("verify", writes=False, tiers=("gemini-3.8-flash-high", "gemini-3.1-pro-high"), answer_template=ANSWER_VERIFY),
-    "review": Role("review", writes=False, tiers=("gemini-3.1-pro-high", "claude-opus-4-6-thinking"), answer_template=ANSWER_REVIEW),
+    "explore": Role("explore", writes=False, tiers=("gemini-3.8-flash-high", "gemini-4-argon-medium"), answer_template=ANSWER_EXPLORE),
+    "code": Role("code", writes=True, tiers=("gemini-4-argon-high", "claude-sonnet-5-5-high"), answer_template=ANSWER_CODE),
+    "verify": Role("verify", writes=False, tiers=("gemini-3.8-flash-high", "gemini-4-argon-medium"), answer_template=ANSWER_VERIFY),
+    "review": Role("review", writes=False, tiers=("gemini-4-argon-high", "claude-opus-5-5-high"), answer_template=ANSWER_REVIEW),
 }
 
 
@@ -99,3 +103,4 @@ DEFAULT_STATE_ROOT = "~/.ultron/state"
 
 # Executor defaults.
 AGY_TIMEOUT = "20m"
+AGY_TIMEOUT_MAX_MINUTES = 60

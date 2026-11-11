@@ -133,9 +133,9 @@ def parse_timeout(text: str) -> int         # "20m" → 1200, "90s" → 90, "1h"
 @dataclass(frozen=True) class GateRun: cmd: str; exit_code: int; expected: int; tail: tuple[str, ...]; log: str
     @property def ok(self) -> bool
 @dataclass(frozen=True) class CheckReport:
-    contract: tuple[str, ...]; scope: tuple[str, ...]; gate: tuple[GateRun, ...]; warnings: tuple[str, ...]
-    @property def ok(self) -> bool                      # нет нарушений contract/scope и все gate.ok
-    @property def violations(self) -> tuple[str, ...]   # contract + scope + «гейт <cmd>: код <n>, ожидался <m>»
+    contract: tuple[str, ...]; scope: tuple[str, ...]; gate: tuple[GateRun, ...]; anchors: tuple[str, ...]; warnings: tuple[str, ...]
+    @property def ok(self) -> bool                      # нет нарушений contract/scope/anchors и все gate.ok
+    @property def violations(self) -> tuple[str, ...]   # contract + scope + anchors + «гейт <cmd>: код <n>, ожидался <m>»
 
 def load_role_schema(role: str, schema_dir: Path | None = None) -> dict   # ultron/schemas/roles/<role>.json
 def check_contract(env: Envelope, role: Role, schema: dict) -> tuple[list[str], list[str]]
@@ -143,6 +143,7 @@ def git_status(dir: Path) -> set[str] | None            # строки `git stat
 def changed_paths(before: set[str], after: set[str]) -> list[str]
 def check_scope(changed: Sequence[str], spec: Spec) -> list[str]
 def run_gate(spec: Spec) -> list[GateRun]
+def check_anchors(so: dict, role: policy.Role, root: Path) -> list[str]
 def check_all(env: Envelope, spec: Spec, schema: dict, before: set[str] | None, after: set[str] | None) -> CheckReport
 ```
 
@@ -158,9 +159,13 @@ def check_all(env: Envelope, spec: Spec, schema: dict, before: set[str] | None, 
   `роль <role> без записи, но изменено: <пути>`; пишущая роль — путь вне `write`
   (пустой `write` = без ограничений) или внутри `forbid` → `вне разрешённого объёма: <путь>`.
   Совпадение — точное или по префиксу каталога (`tests/` покрывает `tests/x.py`).
+  Также, если задан `scope.max_diff_lines`, работает `check_diff_size`: при превышении числа
+  строк диффа добавляется нарушение `правка больше лимита: ...`. Файлы в этом случае
+  целиком возвращаются к baseline.
 - `run_gate`: команды по порядку через `subprocess.run(cmd, shell=True, cwd=spec.dir)`,
   объединённый stdout+stderr, обрезка лога до `GATE_LOG_MAX_BYTES`, хвост из
   `GATE_TAIL_LINES` строк; после первого несовпадения кода выхода — стоп.
+- `check_anchors`: проверка формата якорей, существования файла, номера строки и совпадения `excerpt` для `evidence` (длиной от 12 символов); плюс наличие evidence для негативных verdict и risk. Нарушения возвращаются списком. Для роли code не выполняется.
 - `check_all`: гейт запускается только если контракт и объём чисты и роль пишет;
   для ролей без записи `gate` пуст, если `acceptance` пуст.
 

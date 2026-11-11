@@ -116,6 +116,19 @@ class SpecTests(unittest.TestCase):
             load_spec(write_spec(self.tmp, self.repo, id="T-17", workspace={"mode": "vm"}))
         self.assertIn("mode", str(ctx.exception))
 
+    def test_max_diff_lines_parsed(self):
+        spec = load_spec(write_spec(self.tmp, self.repo, id="T-18", scope={"max_diff_lines": 3}))
+        self.assertEqual(spec.scope.max_diff_lines, 3)
+
+    def test_max_diff_lines_validation(self):
+        with self.assertRaises(SpecError) as ctx1:
+            load_spec(write_spec(self.tmp, self.repo, id="T-19", scope={"max_diff_lines": 0}))
+        self.assertIn("max_diff_lines", str(ctx1.exception))
+        
+        with self.assertRaises(SpecError) as ctx2:
+            load_spec(write_spec(self.tmp, self.repo, id="T-20", scope={"max_diff_lines": "3"}))
+        self.assertIn("max_diff_lines", str(ctx2.exception))
+
     def test_load_spec_reads_json_file(self):
         p = write_spec(self.tmp, self.repo, id="T-14", goal="цель")
         spec = load_spec(p)

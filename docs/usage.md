@@ -45,7 +45,7 @@ head -1 /tmp/agy-probe/probe.txt             # ждём DELEGATED OK
   "scope": {"write": ["app/service.py"], "forbid": ["tests/", "tools/"]},
   "acceptance": [{"cmd": "python3 -m unittest -q"}],
   "inputs": [{"task": "T-01", "fields": ["map", "facts"]}],
-  "budget": {"attempts_per_tier": 2, "tiers": ["gemini-3.1-pro-high", "claude-sonnet-4-6"], "executor_tokens": 500000, "minutes": 20},
+  "budget": {"attempts_per_tier": 2, "tiers": ["gemini-4-argon-high", "claude-sonnet-5-5-high"], "executor_tokens": 500000, "minutes": 20},
   "executor": {"model": null, "effort": null, "mode": null},
   "workspace": {"mode": "inplace", "seed": []}
 }
@@ -60,7 +60,10 @@ head -1 /tmp/agy-probe/probe.txt             # ждём DELEGATED OK
 | `goal` | нет | одна строка для журнала |
 | `scope.write` | нет | что можно менять; пусто у `code` = любые файлы |
 | `scope.forbid` | нет | что нельзя менять даже внутри `write`; изменения там runtime откатит сам |
+| `scope.max_diff_lines` | нет | лимит на количество строк в диффе; если превышен, файл возвращается в baseline |
 | `acceptance` | нет | команды гейта, по порядку, в `dir`; `expect_exit` по умолчанию 0 |
+
+... (wait, replace carefully)
 | `inputs` | нет | поля результатов прошлых задач, которые runtime вставит в бриф текстом |
 | `budget` | нет | попыток на ступень, ступени моделей, лимит токенов и минут; по умолчанию из политики роли |
 | `executor.model` | нет | заменяет первую ступень; `effort`: low/medium/high; `mode: "plan"` — патч текстом, дерево не трогать |
@@ -93,7 +96,7 @@ ultron run spec-03.json --dry-run       # показать команду agy и
 Единственное, что печатается, — компактный отчёт, до 40 строк:
 
 ```
-=== T-03 | code | accepted | attempts 1 | tier gemini-3.1-pro-high | 33 s | in 21.5k cache 68.8k out 3.3k
+=== T-03 | code | accepted | attempts 1 | tier gemini-4-argon-high | 33 s | in 21.5k cache 68.8k out 3.3k
 summary: …                               ← что сделано, словами исполнителя
 changed_files (1):                       ← что заявил исполнитель
   mod app/service.py · …
@@ -182,10 +185,10 @@ ultron list --dir /abs/repo                      # задачи проекта
 
 | Роль | По умолчанию | Ступень выше | Меняет файлы |
 |---|---|---|---|
-| `explore` | gemini-3.8-flash-high | gemini-3.1-pro-high | нет |
-| `code` | gemini-3.1-pro-high | claude-sonnet-4-6 | да |
-| `verify` | gemini-3.8-flash-high | gemini-3.1-pro-high | нет |
-| `review` | gemini-3.1-pro-high | claude-opus-4-6-thinking | нет |
+| `explore` | gemini-3.8-flash-high | gemini-4-argon-medium | нет |
+| `code` | gemini-4-argon-high | claude-sonnet-5-5-high | да |
+| `verify` | gemini-3.8-flash-high | gemini-4-argon-medium | нет |
+| `review` | gemini-4-argon-high | claude-opus-5-5-high | нет |
 
 Переопределить: `executor.model` (первая ступень) или `budget.tiers` (весь
 список). Claude-модели через `agy` расходуют квоту Antigravity, а не Claude Code.

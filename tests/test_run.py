@@ -40,7 +40,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(result["status"], "accepted")
         self.assertEqual(result["executor_status"], "done")
         self.assertEqual(result["attempts"], 1)
-        self.assertEqual(result["tier"], "gemini-3.1-pro-high")
+        self.assertEqual(result["tier"], "gemini-4-argon-high")
         self.assertEqual(result["changed_files"], ["app/service.py"])
         self.assertEqual(result["claimed_files"], ["app/service.py"])
         self.assertEqual(result["checks"]["contract"], "ok")
@@ -52,7 +52,7 @@ class RunTests(unittest.TestCase):
         self.assertEqual(result["refs"]["conversation"], "conv-1")
         self.assertEqual(len(executor.calls), 1)
         self.assertIsNone(executor.calls[0]["conversation"])
-        self.assertEqual(executor.calls[0]["model"], "gemini-3.1-pro-high")
+        self.assertEqual(executor.calls[0]["model"], "gemini-4-argon-high")
         self.assertTrue(executor.calls[0]["schema"].name == "code.json")
         for p in (state.spec_path, state.brief_path, state.attempts_path, state.gate_log_path, state.result_path):
             self.assertTrue(p.exists(), p)
@@ -94,6 +94,24 @@ class RunTests(unittest.TestCase):
         self.assertEqual(result["checks"]["restored"], ["tests/test_service.py"])
         self.assertEqual(result["changed_files"], ["app/service.py"])
         self.assertEqual((self.repo / "tests" / "test_service.py").read_text(), user_version)
+
+    def test_diff_size_limit(self):
+        def over_limit(prompt, repo):
+            (repo / "app" / "service.py").write_text("1\n2\n3\n4\n5\n")
+            return envelope(so_code())
+            
+        def within_limit(prompt, repo):
+            (repo / "app" / "service.py").write_text(HELLO_DOC)
+            return envelope(so_code())
+
+        result, executor, _ = self.run_spec([over_limit, within_limit], scope={"write": ["app/service.py"], "max_diff_lines": 3})
+        
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["attempts"], 2)
+        
+        second_prompt = executor.calls[1]["prompt"]
+        self.assertIn("Файлы восстановлены из исходного состояния. Внеси только точечные правки: не больше 3 строк diff", second_prompt)
+        self.assertEqual(result["checks"]["restored"], ["app/service.py"])
 
     def test_restored_forbidden_file_then_gate_red_leads_to_retry(self):
         def cheat(prompt, repo):
@@ -180,7 +198,7 @@ class RunTests(unittest.TestCase):
 
     def test_readonly_role_edits_are_restored(self):
         original = (self.repo / "app" / "service.py").read_text()
-        result, executor, _ = self.run_spec([writes("app/service.py", HELLO_DOC, so_explore())], role="explore", acceptance=[], scope={})
+        result, executor, _ = self.run_spec([writes("app/service.py", HELLO_DOC, so_explore(evidence=[{"id": "e1", "where": "-", "excerpt": ""}]))], role="explore", acceptance=[], scope={})
         self.assertEqual(result["status"], "accepted")
         self.assertEqual(result["attempts"], 1)
         self.assertEqual(result["checks"]["scope"], "restored")

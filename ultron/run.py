@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
 from ultron import policy
-from ultron.check import CheckReport, check_all, load_role_schema, check_scope
+from ultron.check import CheckReport, check_all, load_role_schema, check_scope, check_diff_size, DIFF_LIMIT_PREFIX
 from ultron.compose import AttemptSummary, compose_prompt, escalation_prompt, retry_message, report_only_message
 from ultron.executor import Envelope, Executor
 from ultron.spec import Spec, SpecError
@@ -231,7 +231,7 @@ def _run_loop(
                 seed(work_dir, spec.workspace.seed)
             except WorkspaceError as e:
                 env = Envelope(status="NO_OUTPUT", conversation_id=None, structured_output=None, denied_actions=(), usage={}, num_turns=0, duration_seconds=0.0, raw={}, noise=())
-                report = CheckReport(contract=(str(e),), scope=(), gate=(), warnings=())
+                report = CheckReport(contract=(str(e),), scope=(), gate=(), anchors=(), warnings=())
                 attempts.append(Attempt(1, 0, "", None, "", env, report, [], [], "", "", ""))
                 res = build_result(spec, attempts, "failed", [], state)
                 res["failure"] = {"domain": "infra", "kind": "seed"}
@@ -261,6 +261,13 @@ def _run_loop(
         changed = diff_paths(baseline, snap)
         
         violations = check_scope(changed, spec)
+        size_violations = []
+        if spec.scope.max_diff_lines is not None:
+            patch = patch_between(work_dir, baseline, snap)
+            size_violations = check_diff_size(patch, spec.scope.max_diff_lines)
+            if size_violations:
+                violations.extend(size_violations)
+
         restored = []
         if violations:
             paths_to_restore = []
@@ -269,12 +276,22 @@ def _run_loop(
                     paths_to_restore.extend(v.split(" изменено: ")[1].split(", "))
                 elif v.startswith("вне разрешённого объёма: "):
                     paths_to_restore.append(v.split("вне разрешённого объёма: ")[1])
+                elif v.startswith(DIFF_LIMIT_PREFIX):
+                    paths_to_restore.extend(changed)
             
-            restored = restore_paths(work_dir, baseline, paths_to_restore)
+            restored = restore_paths(work_dir, baseline, list(set(paths_to_restore)))
             snap = take_snapshot(work_dir, spec.id, f"attempt-{attempt_num}")
             changed = diff_paths(baseline, snap)
             
         report = check_all(env, spec, schema, changed, cwd=work_dir)
+        if size_violations:
+            report = CheckReport(
+                contract=report.contract,
+                scope=tuple(list(report.scope) + size_violations),
+                gate=report.gate,
+                anchors=report.anchors,
+                warnings=report.warnings
+            )
         
         attempt = Attempt(
             number=attempt_num,
@@ -324,6 +341,7 @@ def _run_loop(
         
         executor_status = env.structured_output.get("status") if env.structured_output else None
         
+        
         if executor_status == "blocked":
             status = "blocked"
             verdict = "blocked"
@@ -339,6 +357,7 @@ def _run_loop(
                 contract=tuple(viol),
                 scope=report.scope,
                 gate=report.gate,
+                anchors=report.anchors,
                 warnings=report.warnings
             )
         elif report.ok:
@@ -545,7 +564,7 @@ def continue_task(
             noise=(),
         )
         
-        report = CheckReport(contract=(), scope=(), gate=(), warnings=())
+        report = CheckReport(contract=(), scope=(), gate=(), anchors=(), warnings=())
         snap_meta = meta.get("snapshot", {})
         attempts.append(Attempt(
             number=meta.get("number", 1),

@@ -135,11 +135,12 @@ def compact(result: dict, max_lines: int = policy.COMPACT_MAX_LINES) -> str:
     contract_s = checks.get("contract", "?")
     scope_s = checks.get("scope", "?")
     gate_info = checks.get("gate")
+    anchors_s = checks.get("anchors", "?")
     if gate_info:
         gate_s = f"gate [{gate_info.get('exit', '?')}] attempt {gate_info.get('attempt', '?')}"
     else:
         gate_s = "gate —"
-    out.append(f"checks: contract {contract_s} · scope {scope_s} · {gate_s}")
+    out.append(f"checks: contract {contract_s} · scope {scope_s} · {gate_s} · anchors {anchors_s}")
 
     restored_list = checks.get("restored") or []
     if restored_list:

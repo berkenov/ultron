@@ -16,6 +16,7 @@ class SpecError(ValueError):
 class Scope:
     write: tuple[str, ...] = ()
     forbid: tuple[str, ...] = ()
+    max_diff_lines: int | None = None
 
 
 @dataclass(frozen=True)
@@ -112,10 +113,17 @@ def parse_spec(data: dict, base_dir: Path) -> Spec:
     goal = data.get("goal", "")
 
     scope_data = data.get("scope", {})
-    _check_keys(scope_data, {"write", "forbid"}, "scope.")
+    _check_keys(scope_data, {"write", "forbid", "max_diff_lines"}, "scope.")
+    
+    max_diff_lines = scope_data.get("max_diff_lines")
+    if max_diff_lines is not None:
+        if not isinstance(max_diff_lines, int) or max_diff_lines < 1:
+            raise SpecError(f"scope.max_diff_lines должен быть целым числом не меньше 1: {max_diff_lines}")
+
     scope = Scope(
         write=tuple(scope_data.get("write", ())),
         forbid=tuple(scope_data.get("forbid", ())),
+        max_diff_lines=max_diff_lines,
     )
 
     inputs_data = data.get("inputs", [])

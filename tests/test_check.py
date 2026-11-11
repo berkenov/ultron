@@ -98,6 +98,18 @@ class ScopeTests(unittest.TestCase):
     def test_no_changes_no_violations(self):
         self.assertEqual(check_scope([], self.spec(role="explore", id="T-7")), [])
 
+    def test_check_diff_size(self):
+        from ultron.check import check_diff_size
+        patch = "--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new\n unchanged\n+another\n"
+        
+        self.assertEqual(check_diff_size(patch, None), [])
+        self.assertEqual(check_diff_size(patch, 4), [])
+        self.assertEqual(check_diff_size(patch, 3), [])
+        
+        viol = check_diff_size(patch, 2)
+        self.assertEqual(len(viol), 1)
+        self.assertIn("правка больше лимита: 3 строк при лимите 2", viol[0])
+
 
 class GateTests(unittest.TestCase):
     def setUp(self):
@@ -196,10 +208,125 @@ class CheckAllTests(unittest.TestCase):
     def test_readonly_role_without_acceptance_has_no_gate(self):
         spec = load_spec(write_spec(self.tmp, self.repo, id="T-4", role="explore"))
         from tests.helpers import so_explore
-        report = check_all(envelope(so_explore()), spec, load_role_schema("explore"), [])
+        report = check_all(envelope(so_explore(evidence=[{"id": "e1", "where": "-", "excerpt": ""}])), spec, load_role_schema("explore"), [])
         self.assertTrue(report.ok)
         self.assertEqual(report.gate, ())
 
 
 if __name__ == "__main__":
     unittest.main()
+
+class AnchorsTests(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.tmp = pathlib.Path(self.tmpdir.name)
+        self.repo = make_repo(self.tmp)
+        self.schema = load_role_schema("review")
+        self.role_review = policy.ROLES["review"]
+        self.role_explore = policy.ROLES["explore"]
+        self.role_verify = policy.ROLES["verify"]
+        self.role_code = policy.ROLES["code"]
+        (self.repo / "test_anchors.py").write_text("line 1\nline 2\nline 3\nline 4 target text is here \nline 5\nline 6\nline 7")
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_existing_file_and_line_passes(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "test_anchors.py:4", "excerpt": "target text is here"}]}
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_missing_file_fails(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "does_not_exist.py:4", "excerpt": "target text is here"}]}
+        violations = check_anchors(so, self.role_review, self.repo)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("файла нет", violations[0])
+
+    def test_dir_without_line_passes(self):
+        from ultron.check import check_anchors
+        (self.repo / "my_dir").mkdir(exist_ok=True)
+        so = {"evidence": [{"where": "my_dir/", "excerpt": ""}]}
+        self.assertEqual(check_anchors(so, self.role_explore, self.repo), [])
+
+    def test_dir_with_line_fails(self):
+        from ultron.check import check_anchors
+        (self.repo / "my_dir").mkdir(exist_ok=True)
+        so = {"evidence": [{"where": "my_dir:10", "excerpt": ""}]}
+        violations = check_anchors(so, self.role_explore, self.repo)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("у каталога нет строк", violations[0])
+
+    def test_missing_dir_fails(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "missing_dir/", "excerpt": ""}]}
+        violations = check_anchors(so, self.role_explore, self.repo)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("файла нет", violations[0])
+
+    def test_line_out_of_bounds_fails(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "test_anchors.py:100", "excerpt": "target text is here"}]}
+        violations = check_anchors(so, self.role_review, self.repo)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("за пределами файла", violations[0])
+
+    def test_excerpt_mismatch_fails(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "test_anchors.py:4", "excerpt": "completely different text here"}]}
+        violations = check_anchors(so, self.role_review, self.repo)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("выдержка не совпадает", violations[0])
+
+    def test_excerpt_match_with_space_diff_passes(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "test_anchors.py:4", "excerpt": "target  text   is\nhere"}]}
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_excerpt_found_within_3_lines(self):
+        from ultron.check import check_anchors
+        # target text is on line 4, search around line 7 (7-3=4)
+        so = {"evidence": [{"where": "test_anchors.py:7", "excerpt": "target text is here"}]}
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_command_in_where_skipped(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "git log --oneline", "excerpt": "target text is here"}]}
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_not_found_skipped(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "не найдено", "excerpt": ""}]}
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_risk_without_evidence_fails_for_review(self):
+        from ultron.check import check_anchors
+        so = {
+            "evidence": [{"where": "test_anchors.py:10", "excerpt": "some code here"}],
+            "risks": [{"where": "test_anchors.py:4", "risk": "bad thing"}]
+        }
+        violations = check_anchors(so, self.role_review, self.repo)
+        self.assertTrue(any("нет выдержки в evidence" in v for v in violations))
+
+    def test_evidence_with_same_path_different_line_fails(self):
+        from ultron.check import check_anchors
+        so = {
+            "evidence": [{"where": "test_anchors.py:100", "excerpt": "some code here"}],
+            "verdicts": [{"where": "test_anchors.py:4", "verdict": "false", "claim": "x"}]
+        }
+        violations = check_anchors(so, self.role_review, self.repo)
+        self.assertTrue(any("нет выдержки в evidence" in v for v in violations))
+
+    def test_evidence_within_3_lines_covers(self):
+        from ultron.check import check_anchors
+        so = {
+            "evidence": [{"where": "test_anchors.py:7", "excerpt": "target text is here"}],
+            "verdicts": [{"where": "test_anchors.py:4", "verdict": "false", "claim": "x"}]
+        }
+        self.assertEqual(check_anchors(so, self.role_review, self.repo), [])
+
+    def test_role_code_skips(self):
+        from ultron.check import check_anchors
+        so = {"evidence": [{"where": "does_not_exist.py:4", "excerpt": "target text is here"}]}
+        self.assertEqual(check_anchors(so, self.role_code, self.repo), [])
+

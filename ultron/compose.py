@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from ultron import policy
-from ultron.check import CheckReport
+from ultron.check import CheckReport, DIFF_LIMIT_PREFIX
 from ultron.spec import Spec
 
 
@@ -70,7 +70,12 @@ def retry_message(report: CheckReport, spec: Spec, restored: Sequence[str] = ())
                 blocks.append("Хвост вывода:\n" + "\n".join(g.tail))
     
     if restored:
-        blocks.append(f"Файлы вне объёма восстановлены оркестратором из исходного состояния: {', '.join(restored)}. Не трогай их.")
+        diff_size_viol = any(v.startswith(DIFF_LIMIT_PREFIX) for v in report.scope)
+        if diff_size_viol:
+            limit = spec.scope.max_diff_lines
+            blocks.append(f"Файлы восстановлены из исходного состояния. Внеси только точечные правки: не больше {limit} строк diff. Переписывать файл целиком нельзя.")
+        else:
+            blocks.append(f"Файлы вне объёма восстановлены оркестратором из исходного состояния: {', '.join(restored)}. Не трогай их.")
     elif report.scope:
         scope_lines = ["Нарушения объёма — откати эти файлы:"]
         for s in report.scope:
@@ -82,10 +87,19 @@ def retry_message(report: CheckReport, spec: Spec, restored: Sequence[str] = ())
     if report.contract:
         blocks.append(f"Ответ не по схеме: {'; '.join(report.contract)}")
         
-    writes = ", ".join(spec.scope.write) if spec.scope.write else "рабочий каталог"
-    fix_msg = f"Исправь причину в разрешённых файлах ({writes})."
-    if spec.scope.forbid:
-        fix_msg += f" {', '.join(spec.scope.forbid)} не трогать."
+    if report.anchors:
+        anchors_block = ["Якоря не подтвердились:"]
+        anchors_block.extend(report.anchors)
+        anchors_block.append("Для каждого: исправь путь и номер строки по файлу или сними утверждение. Выдумывать якорь нельзя; если места в коде нет — пиши «не найдено».")
+        blocks.append("\n".join(anchors_block))
+        
+    if not spec.writes:
+        fix_msg = "Файлы не менять, поправь ответ."
+    else:
+        writes = ", ".join(spec.scope.write) if spec.scope.write else "рабочий каталог"
+        fix_msg = f"Исправь причину в разрешённых файлах ({writes})."
+        if spec.scope.forbid:
+            fix_msg += f" {', '.join(spec.scope.forbid)} не трогать."
     blocks.append(fix_msg)
     
     blocks.append(policy.GIT_BAN)
