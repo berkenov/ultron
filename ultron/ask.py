@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Sequence
 
-from ultron import policy
+from ultron import limits, policy
 from ultron.executor import Executor
 from ultron.pace import wait_turn
 from ultron.state import journal_append, project_slug
@@ -74,6 +74,9 @@ def ask(
     model: str = policy.ASK_MODEL,
     timeout: str = policy.ASK_TIMEOUT,
 ) -> AskResult:
+    gate = limits.budget(root, model)
+    if not gate.allowed:
+        return AskResult(ok=False, status="QUOTA", text="", model=model, seconds=0.0, usage={}, changed=(), saved=None, noise=(gate.reason,))
     before = _git_status(dir)
     wait_turn(root)
     env = executor.run(compose_question(question, files), dir=dir, model=model, schema=None, timeout=timeout)
@@ -87,12 +90,13 @@ def ask(
     ok = env.status == "SUCCESS" and bool(text) and not env.denied_actions
     saved = _save_answer(root, dir, text) if text else None
 
+    quota = limits.record(root, model, env)
     record = dict(env.raw)
     record["_meta"] = {"task": "ask", "role": "ask", "model": model, "verdict": "answered" if ok else "failed", "changed": list(changed)}
     journal_append(root, dir, record)
 
     return AskResult(
-        ok=ok, status=env.status or "NO_OUTPUT", text=text, model=model,
+        ok=ok, status="QUOTA" if quota else (env.status or "NO_OUTPUT"), text=text, model=model,
         seconds=env.duration_seconds, usage=env.usage, changed=changed, saved=saved, noise=env.noise,
     )
 
@@ -105,6 +109,8 @@ def render(result: AskResult) -> str:
         if len(body) > policy.ASK_MAX_CHARS:
             body = body[: policy.ASK_MAX_CHARS].rstrip() + f"\n… обрезано, полный ответ: {result.saved}"
         lines.append(body)
+    elif result.status == "QUOTA":
+        lines.append("Исполнитель недоступен по квоте — сделай сам, повторно не вызывай.")
     else:
         lines.append(f"Ответа нет: {result.status}.")
         lines += [f"  {n}" for n in result.noise[-5:]]

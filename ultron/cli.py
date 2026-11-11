@@ -77,6 +77,10 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
     ask_parser.add_argument("--model")
     ask_parser.add_argument("--state", type=pathlib.Path)
 
+    # budget command: learned limits and the current mode per model family
+    budget_parser = subparsers.add_parser("budget")
+    budget_parser.add_argument("--state", type=pathlib.Path)
+
     # usage command: calls and tokens over the subscription windows
     usage_parser = subparsers.add_parser("usage")
     usage_parser.add_argument("--state", type=pathlib.Path)
@@ -103,6 +107,11 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
                 print(" ".join(cmd))
             return 0
             
+        from ultron import policy as _policy
+
+        brief_chars = len(spec.brief.read_text(encoding="utf-8"))
+        if brief_chars > _policy.BRIEF_WARN_CHARS:
+            print(f"warning: бриф {brief_chars} символов при пороге {_policy.BRIEF_WARN_CHARS} — передача может стоить дороже, чем сделать самому")
         res = run_task(spec, executor=exec_inst, state=state)
         
         print(compact(res))
@@ -119,6 +128,17 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
         result = ask(args.question, dir=directory, executor=exec_inst, root=root, files=args.file, model=args.model or policy.ASK_MODEL)
         print(render(result))
         return 0 if result.ok else 2
+
+    elif args.command == "budget":
+        from ultron import limits, policy
+
+        models = {policy.ASK_MODEL, *(role.model for role in policy.ROLES.values())}
+        seen: dict = {}
+        for model in sorted(models):
+            b = limits.budget(root, model)
+            seen.setdefault(b.family, b)
+        print(limits.render(list(seen.values())))
+        return 0
 
     elif args.command == "usage":
         from ultron.usage import render as render_usage, summarize

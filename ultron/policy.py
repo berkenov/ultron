@@ -123,3 +123,16 @@ PACE_ENV = "ULTRON_PACE_SECONDS"
 # Windows `ultron usage` reports: the subscription refreshes every five hours
 # under a weekly cap. Google publishes no numbers, so this only counts our side.
 USAGE_WINDOWS = (("5 ч", 5 * 3600), ("7 дн", 7 * 86400))
+
+# Learned limits (`ultron budget`). Google publishes no quota numbers, so the
+# runtime learns them from its own quota failures; nothing is enforced before
+# the first one. See ultron/limits.py.
+QUOTA_PATTERN = r"quota|rate.?limit|resource.?exhausted|too many requests|usage limit|limit reached|\b429\b"
+QUOTA_BLOCK_HOURS = 5  # first block equals the refresh window; doubles per repeated failure
+QUOTA_BLOCK_MAX_HOURS = 7 * 24
+LIMIT_SAFETY = 0.8  # work up to this share of the lowest usage a failure was seen at
+LIMIT_GROWTH_PER_DAY = {"5 ч": 0.02, "7 дн": 0.01}  # a quiet ceiling is probed upward
+LIMIT_GROWTH_MAX = 1.2
+LIMIT_FORGET_DAYS = 45  # failures older than this no longer bound anything
+SAVING_SHARE = 0.5  # from this share of the learned limit: reading only, cheap model
+BRIEF_WARN_CHARS = 4000  # a longer brief means the handoff likely costs more than it saves

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-from ultron import policy
+from ultron import limits, policy
 from ultron.check import CheckReport, check_all, load_role_schema, check_scope, check_diff_size, DIFF_LIMIT_PREFIX
 from ultron.compose import AttemptSummary, compose_prompt, escalation_prompt, retry_message, report_only_message
 from ultron.executor import Envelope, Executor
@@ -244,8 +244,18 @@ def _run_loop(
         baseline = take_snapshot(repo_dir, spec.id, "baseline")
     
     report_retries = 0
+    quota_reason = None
 
     while True:
+        open_tier = next((i for i in range(tier_idx, len(spec.budget.tiers)) if limits.budget(state.root, spec.budget.tiers[i]).allowed), None)
+        if open_tier is None:
+            quota_reason = limits.budget(state.root, spec.budget.tiers[tier_idx]).reason
+            env = Envelope(status="QUOTA", conversation_id=None, structured_output=None, denied_actions=(), usage={}, num_turns=0, duration_seconds=0.0, raw={}, noise=())
+            report = CheckReport(contract=(f"исполнитель недоступен: {quota_reason}",), scope=(), gate=(), anchors=(), warnings=())
+            attempts.append(Attempt(attempt_num, tier_idx, spec.budget.tiers[tier_idx], None, prompt, env, report, [], [], "", "", ""))
+            status = "failed"
+            break
+        tier_idx = open_tier
         model = spec.budget.tiers[tier_idx]
         
         wait_turn(state.root)
@@ -344,7 +354,11 @@ def _run_loop(
         executor_status = env.structured_output.get("status") if env.structured_output else None
         
         
-        if executor_status == "blocked":
+        if limits.record(state.root, model, env):
+            quota_reason = "отказ по квоте посреди задачи"
+            status = "failed"
+            verdict = "failed"
+        elif executor_status == "blocked":
             status = "blocked"
             verdict = "blocked"
         elif not env.structured_output and env.status in ("NO_OUTPUT", "TIMEOUT"):
@@ -439,6 +453,12 @@ def _run_loop(
         res["failure"] = {"domain": "semantic", "kind": semantic_kind}
         
     res["refs"]["snapshots"]["baseline"] = baseline.commit
+
+    if quota_reason:
+        # Hand the task to Claude: what the executor managed stays where it is, as a patch too.
+        handoff_patch = patch_between(work_dir, baseline, final_snap)
+        res["failure"] = {"domain": "quota", "kind": "handoff"}
+        res["handoff"] = {"reason": quota_reason, "patch": str(state.save_patch(handoff_patch)) if handoff_patch.strip() else None}
     
     worktree_ref = None
     integration_ref = None

@@ -188,6 +188,10 @@ def compact(result: dict, max_lines: int = policy.COMPACT_MAX_LINES) -> str:
         if failure:
             out.append(f"failure: {failure.get('domain', '?')}/{failure.get('kind', '?')}")
 
+    handoff = result.get("handoff")
+    if handoff:
+        out.append(f"handoff: {handoff.get('reason')} — доделай сам" + (f" · сделанное: {handoff['patch']}" if handoff.get("patch") else " · исполнитель ничего не изменил"))
+
     refs = result.get("refs") or {}
     
     integration = refs.get("integration")
