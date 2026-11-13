@@ -86,7 +86,7 @@ def render(summary: dict) -> str:
         for model in sorted(rows, key=lambda m: -rows[m]["calls"]):
             r = rows[model]
             lines.append(f"  {model}: {r['calls']} выз., вход {r['input']}, выход {r['output']}")
-    names = {"self": "Claude сам", "subagent": "субагент Claude", "flash": "Gemini Flash", "argon": "Gemini Argon"}
+    names = {"self": "Claude сам", "subagent": "субагент Claude", "hydrogen": "Gemini Hydrogen", "flash": "Gemini Flash", "argon": "Gemini Argon"}
     if summary.get("decisions"):
         lines.append("Решения за 7 дн: " + ", ".join(f"{names.get(k, k)} — {v}" for k, v in sorted(summary["decisions"].items(), key=lambda kv: -kv[1])))
     if summary.get("outcomes"):

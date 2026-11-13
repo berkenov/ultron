@@ -42,6 +42,19 @@ def _looks_like_code_name(name: str) -> bool:
     return len(bare) >= 3 and bare.lower() not in _LITERALS
 
 
+def _word(name: str) -> re.Pattern[str]:
+    return re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)")
+
+
+def _name_occurs(bare: str, bodies: list[str]) -> bool:
+    """A plain name must occur as a word. A qualified one (`Class.method`) is
+    rarely written that way in code, so it passes when every part occurs."""
+    if any(_word(bare).search(body) for body in bodies):
+        return True
+    parts = bare.split(".")
+    return len(parts) > 1 and all(any(_word(part).search(body) for body in bodies) for part in parts)
+
+
 def check_answer(text: str, root: pathlib.Path) -> AnswerCheck:
     problems: list[str] = []
     files: dict[str, str] = {}
@@ -77,7 +90,6 @@ def check_answer(text: str, root: pathlib.Path) -> AnswerCheck:
         for name in names:
             checked += 1
             bare = name.rstrip("()")
-            pattern = re.compile(r"(?<![\w.])" + re.escape(bare) + r"(?!\w)") if "." in bare else re.compile(r"(?<!\w)" + re.escape(bare) + r"(?!\w)")
-            if not any(pattern.search(body) for body in bodies):
+            if not _name_occurs(bare, bodies):
                 problems.append(f"имя `{name}` не встречается в файлах, на которые ссылается ответ")
     return AnswerCheck(anchors=len(seen), symbols=checked, problems=tuple(problems))

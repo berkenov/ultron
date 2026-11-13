@@ -40,9 +40,9 @@ T1 никогда не получает: выбор архитектуры, из
 
 | Роль | Задача | Модель по умолчанию | Пишет в дерево | Схема |
 |---|---|---|---|---|
-| `explore` | карта участка кода, проверка фактов, якоря `путь:строка` | `gemini-3.8-flash-high` | нет | `schemas/explore.json` |
+| `explore` | карта участка кода, проверка фактов, якоря `путь:строка` | `gemini-4-hydrogen-high` | нет | `schemas/explore.json` |
 | `code` | изменения по готовому ТЗ; в `--mode plan` — патч текстом | `gemini-4-argon-high` | да | `schemas/code.json` |
-| `verify` | прогнать гейт проекта, разобрать падения | `gemini-3.8-flash-high` | нет | `schemas/verify.json` |
+| `verify` | прогнать гейт проекта, разобрать падения | `gemini-4-hydrogen-high` | нет | `schemas/verify.json` |
 | `review` | второе мнение по решению, с привязкой к коду | `gemini-4-argon-high` | нет | `schemas/review.json` |
 
 Роль — это шаблон брифа плюс схема ответа, не сущность CLI: своих агентов в
@@ -171,7 +171,7 @@ review:   Ответ строго по схеме. verdicts — по каждо�
 ```
 
 Лестница моделей, все через `agy`, квота Claude Code не тратится:
-`gemini-3.8-flash-high` → `gemini-4-argon-medium` → `gemini-4-argon-high` → `claude-sonnet-5-5-high` → `claude-opus-5-5-high` → Fable сам.
+`gemini-4-hydrogen-high` → `gemini-4-argon-medium` → `gemini-4-argon-high` → `claude-sonnet-5-5-high` → `claude-opus-5-5-high` → Fable сам.
 
 - `blocked` эскалации не подлежит: вопрос владельцу сразу.
 - Обратная эскалация: если `code` на `argon-high` вернул `done` с изменением в

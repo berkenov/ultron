@@ -38,6 +38,13 @@ class CheckAnswerTests(Base):
         self.assertTrue(any("строки нет: app/service.py:999" in p for p in r.problems))
         self.assertTrue(any("`say_hello()`" in p for p in r.problems))
 
+    def test_qualified_name_passes_when_its_parts_exist(self):
+        (self.repo / "cubit.dart").write_text("class AuthCubit {\n  void retry() {}\n}\n", encoding="utf-8")
+        ok = check_answer("`AuthCubit.retry` в cubit.dart:2", self.repo)
+        self.assertEqual(ok.problems, ())
+        bad = check_answer("`AuthCubit.missing` в cubit.dart:2", self.repo)
+        self.assertEqual(len(bad.problems), 1)
+
     def test_names_are_not_judged_without_anchored_files(self):
         self.assertEqual(check_answer("Есть `some_function`, но где — не знаю.", self.repo).problems, ())
 

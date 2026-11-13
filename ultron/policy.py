@@ -58,9 +58,9 @@ ANSWER_REVIEW = (
 )
 
 ROLES: dict[str, Role] = {
-    "explore": Role("explore", writes=False, tiers=("gemini-3.8-flash-high", "gemini-4-argon-medium"), answer_template=ANSWER_EXPLORE),
+    "explore": Role("explore", writes=False, tiers=("gemini-4-hydrogen-high", "gemini-4-argon-medium"), answer_template=ANSWER_EXPLORE),
     "code": Role("code", writes=True, tiers=("gemini-4-argon-high", "claude-sonnet-5-5-high"), answer_template=ANSWER_CODE),
-    "verify": Role("verify", writes=False, tiers=("gemini-3.8-flash-high", "gemini-4-argon-medium"), answer_template=ANSWER_VERIFY),
+    "verify": Role("verify", writes=False, tiers=("gemini-4-hydrogen-high", "gemini-4-argon-medium"), answer_template=ANSWER_VERIFY),
     "review": Role("review", writes=False, tiers=("gemini-4-argon-high", "claude-opus-5-5-high"), answer_template=ANSWER_REVIEW),
 }
 
@@ -106,7 +106,7 @@ AGY_TIMEOUT = "20m"
 AGY_TIMEOUT_MAX_MINUTES = 60
 
 # Quick read-only questions (`ultron ask`): no spec, no snapshots, no gate.
-ASK_MODEL = "gemini-3.8-flash-high"
+ASK_MODEL = "gemini-4-hydrogen-high"
 ASK_TIMEOUT = "5m"
 ASK_MAX_CHARS = 6000  # what Claude sees; the full answer is saved next to the journal
 ASK_NOTE = (
@@ -119,7 +119,7 @@ ASK_NOTE = (
     "Если вопрос не про код — краткий ответ со ссылками на источники."
 )
 ASK_MIN_LINES = 300  # named files shorter than this in total are cheaper for Claude to read itself
-NOTE_TARGETS = ("self", "subagent", "flash", "argon")  # who a piece of work went to (`ultron note`)
+NOTE_TARGETS = ("self", "subagent", "hydrogen", "flash", "argon")  # who a piece of work went to (`ultron note`)
 
 # Pacing: minimum pause between executor calls, so runs do not look like a flood
 # to the subscription's abuse filters. 0 disables.

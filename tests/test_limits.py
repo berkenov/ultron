@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from tests.helpers import GATE_CMD, FakeExecutor, envelope, make_repo, so_code, write_spec
 from tests.test_cli import run_cli
-from ultron import limits
+from ultron import limits, policy
 from ultron.executor import Envelope
 from ultron.spec import load_spec
 from ultron.run import run_task
@@ -96,7 +96,7 @@ class LearningTests(Base):
 
 class WithoutExecutorTests(Base):
     def test_ask_does_not_call_when_blocked(self):
-        limits.record(self.root, FLASH, refusal())
+        limits.record(self.root, policy.ASK_MODEL, refusal())
         ex = FakeExecutor([])
         code, out, _ = run_cli(["ask", "вопрос", "--dir", str(self.repo), "--state", str(self.root)], executor=ex)
         self.assertEqual((code, ex.calls), (2, []))
