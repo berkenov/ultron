@@ -162,7 +162,7 @@ def main(argv: Sequence[str] | None = None, executor: Executor | None = None) ->
     elif args.command == "budget":
         from ultron import limits, policy
 
-        models = {policy.ASK_MODEL, *(role.model for role in policy.ROLES.values())}
+        models = {policy.ASK_MODEL, *(tier for role in policy.ROLES.values() for tier in role.tiers if tier.startswith("gemini-"))}
         seen: dict = {}
         for model in sorted(models):
             b = limits.budget(root, model)

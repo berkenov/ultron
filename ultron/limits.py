@@ -202,5 +202,5 @@ def render(budgets: list[Budget]) -> str:
             u, lim = b.usage[window], b.limits.get(window)
             learned = f"порог {lim['calls']} выз. (по {lim['based_on']} отказам)" if lim else "порог не выучен"
             lines.append(f"  за {window}: {u['calls']} выз., {u['tokens']} токенов · {learned}")
-    lines.append("свободно — отдавать всё по таблице; экономно — только чтение на Flash; пусто — Claude работает сам.")
+    lines.append("свободно — отдавать всё по таблице; экономно — только чтение на Hydrogen; пусто — Claude работает сам.")
     return "\n".join(lines)
